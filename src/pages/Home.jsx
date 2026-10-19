@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
 import { HUES, MASTERED_BOX } from '../components/util.js'
+import { SafariTip } from '../components/Banners.jsx'
 
 export default function Home() {
-  const { state, dispatch } = useStore()
+  const { state, dispatch, newId } = useStore()
   const [name, setName] = useState('')
   const totalCards = state.cards.length
   const mastered = state.cards.filter((c) => c.box >= MASTERED_BOX).length
@@ -13,12 +14,13 @@ export default function Home() {
     e.preventDefault()
     const n = name.trim().slice(0, 60)
     if (!n) return
-    dispatch({ type: 'subject/add', name: n, hue: HUES[state.subjects.length % HUES.length] })
+    dispatch({ type: 'subject/add', id: newId(), name: n, hue: HUES[state.subjects.length % HUES.length] })
     setName('')
   }
 
   return (
     <>
+      <SafariTip />
       <section className="hero">
         <div>
           <p className="eyebrow">Hôm nay ôn gì?</p>

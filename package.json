@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:preview": "vite build --mode singlefile --outDir dist-preview",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:preview": "vite build --mode xem-thu --outDir dist-preview && node scripts/make-preview.mjs dist-preview",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

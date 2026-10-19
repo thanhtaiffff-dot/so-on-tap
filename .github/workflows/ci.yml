@@ -1,0 +1,43 @@
+# Kiểm tra tự động mỗi lần đẩy code lên main hoặc mở đề xuất thay đổi (pull request):
+# soát cách viết code, chạy test dữ liệu, build, rồi chạy test trên trình duyệt thật (máy tính + điện thoại).
+name: Kiểm tra
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kiem-tra:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      # Test trình duyệt hỏng thì giữ lại báo cáo (ảnh chụp, video thao tác) 7 ngày để xem lỗi ở đâu.
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bao-cao-test-trinh-duyet
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

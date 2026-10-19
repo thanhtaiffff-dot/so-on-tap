@@ -1,22 +1,27 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { useStore } from '../data/store.jsx'
 import ConfirmButton from '../components/ConfirmButton.jsx'
 import { MASTERED_BOX, parseBulk } from '../components/util.js'
+import { LIMITS } from '../data/schema.js'
+
+// Mỗi lần chỉ hiện một phần danh sách, để môn có hàng nghìn thẻ vẫn mở nhanh.
+const PAGE = 100
 
 export default function Cards({ subject, cards }) {
-  const { dispatch } = useStore()
+  const { dispatch, newId } = useStore()
   const [front, setFront] = useState('')
   const [back, setBack] = useState('')
   const [bulk, setBulk] = useState('')
   const [showBulk, setShowBulk] = useState(false)
-  const [editId, setEditId] = useState(null)
-  const [edit, setEdit] = useState({ front: '', back: '' })
+  const [limit, setLimit] = useState(PAGE)
   const parsed = parseBulk(bulk)
+  // Thẻ mới thêm hiện lên đầu, ngay dưới ô nhập.
+  const shown = cards.slice(-limit).reverse()
 
   function addOne(e) {
     e.preventDefault()
     if (!front.trim() || !back.trim()) return
-    dispatch({ type: 'card/addMany', subjectId: subject.id, items: [{ front: front.trim(), back: back.trim() }] })
+    dispatch({ type: 'card/addMany', subjectId: subject.id, items: [{ id: newId(), front: front.trim(), back: back.trim() }] })
     setFront('')
     setBack('')
     document.getElementById('card-front')?.focus()
@@ -24,7 +29,7 @@ export default function Cards({ subject, cards }) {
 
   function addBulk() {
     if (!parsed.length) return
-    dispatch({ type: 'card/addMany', subjectId: subject.id, items: parsed })
+    dispatch({ type: 'card/addMany', subjectId: subject.id, items: parsed.map((it) => ({ ...it, id: newId() })) })
     setBulk('')
     setShowBulk(false)
   }
@@ -34,11 +39,11 @@ export default function Cards({ subject, cards }) {
       <form className="card-form" onSubmit={addOne}>
         <div className="field">
           <label htmlFor="card-front" className="label">Mặt trước (câu hỏi)</label>
-          <input id="card-front" value={front} maxLength={500} onChange={(e) => setFront(e.target.value)} placeholder="ambitious" />
+          <input id="card-front" value={front} maxLength={LIMITS.front} onChange={(e) => setFront(e.target.value)} placeholder="ambitious" />
         </div>
         <div className="field">
           <label htmlFor="card-back" className="label">Mặt sau (đáp án)</label>
-          <input id="card-back" value={back} maxLength={500} onChange={(e) => setBack(e.target.value)} placeholder="tham vọng" />
+          <input id="card-back" value={back} maxLength={LIMITS.back} onChange={(e) => setBack(e.target.value)} placeholder="tham vọng" />
         </div>
         <button className="btn" disabled={!front.trim() || !back.trim()}>Thêm thẻ</button>
       </form>
@@ -62,42 +67,60 @@ export default function Cards({ subject, cards }) {
       {cards.length === 0 ? (
         <p className="muted">Chưa có thẻ nào. Thêm thẻ đầu tiên ở trên nhé.</p>
       ) : (
-        <ul className="card-list">
-          {cards.map((c) => (
-            <li key={c.id}>
-              {editId === c.id ? (
-                <form className="card-edit" onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!edit.front.trim() || !edit.back.trim()) return
-                  dispatch({ type: 'card/update', id: c.id, front: edit.front.trim(), back: edit.back.trim() })
-                  setEditId(null)
-                }}>
-                  <input id={`edit-front-${c.id}`} aria-label="Mặt trước" value={edit.front} maxLength={500} onChange={(e) => setEdit({ ...edit, front: e.target.value })} />
-                  <input id={`edit-back-${c.id}`} aria-label="Mặt sau" value={edit.back} maxLength={500} onChange={(e) => setEdit({ ...edit, back: e.target.value })} />
-                  <div className="row">
-                    <button className="btn">Lưu</button>
-                    <button type="button" className="btn ghost" onClick={() => setEditId(null)}>Huỷ</button>
-                  </div>
-                </form>
-              ) : (
-                <div className="card-row">
-                  <div className="card-text">
-                    <b>{c.front}</b>
-                    <span className="muted">{c.back}</span>
-                  </div>
-                  <span className={`box-pill ${c.box >= MASTERED_BOX ? 'mastered' : ''}`} title="Càng cao càng thuộc (0 đến 5)">
-                    {c.box >= MASTERED_BOX ? 'Đã thuộc' : `Mức ${c.box}`}
-                  </span>
-                  <div className="row">
-                    <button type="button" className="btn ghost" onClick={() => { setEditId(c.id); setEdit({ front: c.front, back: c.back }) }}>Sửa</button>
-                    <ConfirmButton onConfirm={() => dispatch({ type: 'card/delete', id: c.id })} />
-                  </div>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="card-list">
+            {shown.map((c) => <CardRow key={c.id} card={c} dispatch={dispatch} />)}
+          </ul>
+          {cards.length > limit && (
+            <button type="button" className="btn ghost more-btn" onClick={() => setLimit((n) => n + PAGE)}>
+              Hiện thêm {Math.min(PAGE, cards.length - limit)} thẻ (còn {cards.length - limit})
+            </button>
+          )}
+        </>
       )}
     </section>
   )
 }
+
+// Mỗi dòng tự giữ trạng thái sửa của mình, nên sửa một thẻ không làm vẽ lại cả danh sách.
+const CardRow = memo(function CardRow({ card, dispatch }) {
+  const [edit, setEdit] = useState(null)
+
+  if (edit)
+    return (
+      <li>
+        <form className="card-edit" onSubmit={(e) => {
+          e.preventDefault()
+          if (!edit.front.trim() || !edit.back.trim()) return
+          dispatch({ type: 'card/update', id: card.id, front: edit.front.trim(), back: edit.back.trim() })
+          setEdit(null)
+        }}>
+          <input id={`edit-front-${card.id}`} aria-label="Mặt trước" value={edit.front} maxLength={LIMITS.front} autoFocus onChange={(e) => setEdit({ ...edit, front: e.target.value })} />
+          <input id={`edit-back-${card.id}`} aria-label="Mặt sau" value={edit.back} maxLength={LIMITS.back} onChange={(e) => setEdit({ ...edit, back: e.target.value })} />
+          <div className="row">
+            <button className="btn">Lưu</button>
+            <button type="button" className="btn ghost" onClick={() => setEdit(null)}>Huỷ</button>
+          </div>
+        </form>
+      </li>
+    )
+
+  const mastered = card.box >= MASTERED_BOX
+  return (
+    <li>
+      <div className="card-row">
+        <div className="card-text">
+          <b>{card.front}</b>
+          <span className="muted">{card.back}</span>
+        </div>
+        <span className={`box-pill ${mastered ? 'mastered' : ''}`} title="Càng cao càng thuộc (0 đến 5). Mỗi ngày thẻ lên tối đa 1 mức.">
+          {mastered ? 'Đã thuộc' : `Mức ${card.box}`}
+        </span>
+        <div className="row">
+          <button type="button" className="btn ghost" onClick={() => setEdit({ front: card.front, back: card.back })}>Sửa</button>
+          <ConfirmButton onConfirm={() => dispatch({ type: 'card/delete', id: card.id })} />
+        </div>
+      </div>
+    </li>
+  )
+})

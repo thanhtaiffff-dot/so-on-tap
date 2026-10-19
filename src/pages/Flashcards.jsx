@@ -36,12 +36,22 @@ export default function Flashcards({ subject, cards }) {
     setPos((p) => p + 1)
   }, [current, dispatch])
 
+  // Phím tắt: phím cách để lật, ← chưa nhớ, → nhớ rồi. Vẫn dùng được sau khi bấm chuột vào thẻ.
   useEffect(() => {
     function onKey(e) {
-      if (e.target.closest('input, textarea, select, button')) return
-      if (e.code === 'Space') { e.preventDefault(); setFlipped((f) => !f) }
-      if (flipped && e.key === 'ArrowLeft') answer(false)
-      if (flipped && e.key === 'ArrowRight') answer(true)
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return
+      const t = e.target
+      if (t.closest?.('input, textarea, select, [contenteditable="true"]')) return
+      const onCard = Boolean(t.closest?.('.flashcard'))
+      if (!onCard && t.closest?.('button, a, summary, [role="radio"]')) return
+      if (e.key === ' ') {
+        if (onCard) return // nút thẻ tự lật khi bấm phím cách
+        e.preventDefault()
+        setFlipped((f) => !f)
+      } else if (flipped && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault()
+        answer(e.key === 'ArrowRight')
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -81,22 +91,23 @@ export default function Flashcards({ subject, cards }) {
           <p className="eyebrow">Xong lượt này</p>
           <p className="big num">{tally.yes}<small> nhớ</small> · {tally.no}<small> chưa nhớ</small></p>
           {queue.length === 0 && <p className="muted">Bạn đã thuộc hết thẻ. Bỏ chọn "Chỉ thẻ chưa thuộc" để ôn lại tất cả.</p>}
+          <p className="muted small">Mỗi thẻ lên tối đa 1 mức mỗi ngày, nên phải nhớ được ở 3 ngày khác nhau mới tính là đã thuộc.</p>
           <button type="button" className="btn" onClick={() => restart()}>Ôn lượt mới</button>
         </div>
       ) : (
         <>
-          <button type="button" className={`flashcard ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((f) => !f)}
-            aria-label={flipped ? `Mặt sau: ${back}. Bấm để lật lại` : `Mặt trước: ${front}. Bấm để lật`}>
-            <span className="face front">
+          <button type="button" className={`flashcard ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((f) => !f)}>
+            <span className="face front" aria-hidden={flipped}>
               <span className="face-label">Câu hỏi</span>
               <span className="face-text">{front}</span>
               <span className="hint">Bấm vào thẻ hoặc phím cách để lật</span>
             </span>
-            <span className="face back">
+            <span className="face back" aria-hidden={!flipped}>
               <span className="face-label">Đáp án</span>
               <span className="face-text">{back}</span>
             </span>
           </button>
+          <p className="visually-hidden" aria-live="polite">{flipped ? `Đáp án: ${back}` : ''}</p>
           <div className="answer-row">
             <button type="button" className="btn bad" disabled={!flipped} onClick={() => answer(false)}>Chưa nhớ <kbd>←</kbd></button>
             <button type="button" className="btn good" disabled={!flipped} onClick={() => answer(true)}>Nhớ rồi <kbd>→</kbd></button>
