@@ -2,11 +2,13 @@
 // Ngưỡng: mở danh sách dưới 1,5 giây; mỗi phím dưới 100 ms (mốc "thấy tức thì" của mô hình RAIL),
 // rộng hơn số đo thật nhiều để máy chạy test chậm cũng qua; số đo thật in ra trong kết quả.
 import { expect, test } from '@playwright/test'
-import { openSubject, seedLegacy, tab } from './helpers.js'
+import { openSubject, seedLegacy, tab, waitAnimations } from './helpers.js'
 
 test('nhiều dữ liệu vẫn mở nhanh và gõ không bị giật', async ({ page }) => {
   await seedLegacy(page, { cards: 2000, notes: 150, noteLen: 600 })
   await openSubject(page)
+  // Playwright chỉ bấm khi nút đã đứng yên, nên đợi hiệu ứng xuất hiện xong rồi mới bấm giờ.
+  await waitAnimations(page)
 
   const t0 = Date.now()
   await tab(page, 'Bộ thẻ')
@@ -17,6 +19,7 @@ test('nhiều dữ liệu vẫn mở nhanh và gõ không bị giật', async ({
   await tab(page, 'Ghi chú')
   await page.locator('.note-item').first().click()
   await page.locator('#note-body').click()
+  await waitAnimations(page)
   const perKey = await page.evaluate(async () => {
     const ta = document.querySelector('#note-body')
     const set = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set

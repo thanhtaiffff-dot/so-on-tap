@@ -1,14 +1,16 @@
 // Khả năng truy cập (người dùng trình đọc màn hình, bàn phím, mắt kém): quét bằng axe theo chuẩn WCAG 2.1 AA.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-import { openSubject, tab } from './helpers.js'
+import { openSubject, tab, waitAnimations } from './helpers.js'
 
-for (const colorScheme of ['light', 'dark']) {
-  test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${colorScheme === 'light' ? 'sáng' : 'tối'})`, async ({ page }) => {
-    await page.emulateMedia({ colorScheme })
+for (const theme of ['light', 'dark']) {
+  test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${theme === 'light' ? 'sáng' : 'tối'})`, async ({ page }) => {
+    await page.addInitScript((t) => localStorage.setItem('so-on-tap:giao-dien', t), theme)
     const problems = []
     const scan = async (screen) => {
-      await page.waitForTimeout(150)
+      // Đợi các hiệu ứng xuất hiện chạy xong, để đo độ tương phản trên màu thật.
+      await waitAnimations(page)
+      await page.waitForTimeout(50)
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']).analyze()
       for (const v of r.violations) problems.push(`${screen}: ${v.id} (${v.nodes.map((n) => n.target.join(' ')).join(', ')})`)
     }
@@ -45,6 +47,9 @@ for (const colorScheme of ['light', 'dark']) {
     await scan('cài đặt')
     await page.getByRole('link', { name: 'Môn học' }).click()
     await scan('trang chủ')
+    await page.getByRole('button', { name: 'Tìm nhanh' }).click()
+    await page.getByRole('combobox').fill('anh')
+    await scan('tìm nhanh')
     expect(problems).toEqual([])
   })
 }

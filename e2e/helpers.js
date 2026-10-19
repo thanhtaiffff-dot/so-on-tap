@@ -12,6 +12,11 @@ export async function openSubject(page, name = 'Tiếng Anh') {
   await expect(page.locator('h1')).toHaveText(name)
 }
 
+// Đợi các hiệu ứng xuất hiện chạy xong (khối trượt lên, màu nền đổi theo môn).
+export async function waitAnimations(page) {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))))
+}
+
 export async function tab(page, name) {
   await page.locator('.tabs a', { hasText: name }).click()
 }

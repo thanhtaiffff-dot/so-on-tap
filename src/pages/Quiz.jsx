@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
 import { formatDate, quizCounts, shuffle } from '../components/util.js'
@@ -117,12 +117,37 @@ export default function Quiz({ subject, cards }) {
   }
 
   return (
+    <Question key={pos} q={q} pos={pos} total={questions.length} right={answers.filter((a) => a.ok).length}
+      picked={picked} onPick={pick} onNext={() => { setPos(pos + 1); setPicked(null) }} />
+  )
+}
+
+const KEYS = 'abcd'
+
+function Question({ q, pos, total, right, picked, onPick, onNext }) {
+  // Phím tắt: A, B, C, D (hoặc 1 đến 4) để chọn đáp án; Enter để sang câu tiếp.
+  useEffect(() => {
+    if (picked !== null) return
+    function onKey(e) {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"], dialog')) return
+      const k = e.key.toLowerCase()
+      const i = KEYS.includes(k) ? KEYS.indexOf(k) : '1234'.indexOf(k)
+      if (i < 0 || i >= q.options.length) return
+      e.preventDefault()
+      onPick(q.options[i])
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [picked, q, onPick])
+
+  return (
     <section className="study narrow">
       <div className="row between">
-        <p className="eyebrow">Câu {pos + 1} / {questions.length}</p>
-        <p className="muted small num">Đúng {answers.filter((a) => a.ok).length}</p>
+        <p className="eyebrow">Câu {pos + 1} / {total}</p>
+        <p className="muted small num">Đúng {right}</p>
       </div>
-      <div className="progress"><span style={{ width: `${(pos / questions.length) * 100}%` }} /></div>
+      <div className="progress"><span style={{ width: `${(pos / total) * 100}%` }} /></div>
       <h2 className="question">{q.prompt}</h2>
       <div className="options">
         {q.options.map((opt, i) => {
@@ -130,8 +155,9 @@ export default function Quiz({ subject, cards }) {
           if (picked !== null && opt === q.correct) cls += ' is-correct'
           else if (picked === opt) cls += ' is-wrong'
           return (
-            <button key={opt} type="button" className={cls} onClick={() => pick(opt)} disabled={picked !== null && picked !== opt && opt !== q.correct}>
-              <span className="opt-key">{'ABCD'[i]}</span>
+            <button key={opt} type="button" className={cls} style={{ '--i': i }} onClick={() => onPick(opt)}
+              disabled={picked !== null && picked !== opt && opt !== q.correct} aria-keyshortcuts={KEYS[i].toUpperCase()}>
+              <kbd className="opt-key">{KEYS[i].toUpperCase()}</kbd>
               <span>{opt}</span>
             </button>
           )
@@ -140,8 +166,8 @@ export default function Quiz({ subject, cards }) {
       {picked !== null && (
         <div className="row between feedback" role="status">
           <b className={picked === q.correct ? 'good-text' : 'bad-text'}>{picked === q.correct ? 'Chính xác!' : 'Chưa đúng'}</b>
-          <button type="button" className="btn" autoFocus onClick={() => { setPos(pos + 1); setPicked(null) }}>
-            {pos + 1 === questions.length ? 'Xem kết quả' : 'Câu tiếp'}
+          <button type="button" className="btn" autoFocus onClick={onNext}>
+            {pos + 1 === total ? 'Xem kết quả' : 'Câu tiếp'} <kbd aria-hidden="true">↵</kbd>
           </button>
         </div>
       )}

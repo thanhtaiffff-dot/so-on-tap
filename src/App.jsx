@@ -4,21 +4,27 @@ import Subject from './pages/Subject.jsx'
 import Settings from './pages/Settings.jsx'
 import ThemeToggle from './components/ThemeToggle.jsx'
 import Banners from './components/Banners.jsx'
+import CommandPalette, { PaletteButton } from './components/CommandPalette.jsx'
 import { StoreGate } from './data/store.jsx'
 
 export default function App() {
   return (
     <div className="app">
+      {/* Nền có vệt màu mờ phía sau, để các khối kính mờ phía trước có màu để "nhìn xuyên" qua. */}
+      <div className="ambient" aria-hidden="true" />
       <header className="topbar">
         <Link to="/" className="brand" aria-label="Sổ Ôn Tập, về trang chủ">
           <span className="brand-mark" aria-hidden="true" />
-          Sổ Ôn Tập
+          <span className="brand-name">Sổ Ôn Tập</span>
         </Link>
         <nav className="topnav">
           <NavLink to="/" end>Môn học</NavLink>
           <NavLink to="/cai-dat">Cài đặt</NavLink>
-          <ThemeToggle />
         </nav>
+        <div className="top-actions">
+          <PaletteButton className="palette-trigger" />
+          <ThemeToggle />
+        </div>
       </header>
       <main className="page">
         <StoreGate>
@@ -31,6 +37,7 @@ export default function App() {
           </Routes>
         </StoreGate>
       </main>
+      <CommandPalette />
     </div>
   )
 }

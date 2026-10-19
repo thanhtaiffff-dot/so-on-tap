@@ -97,14 +97,17 @@ export default function Flashcards({ subject, cards }) {
       ) : (
         <>
           <button type="button" className={`flashcard ${flipped ? 'is-flipped' : ''}`} onClick={() => setFlipped((f) => !f)}>
-            <span className="face front" aria-hidden={flipped}>
-              <span className="face-label">Câu hỏi</span>
-              <span className="face-text">{front}</span>
-              <span className="hint">Bấm vào thẻ hoặc phím cách để lật</span>
-            </span>
-            <span className="face back" aria-hidden={!flipped}>
-              <span className="face-label">Đáp án</span>
-              <span className="face-text">{back}</span>
+            {/* key theo thẻ: mỗi thẻ mới trượt nhẹ vào, còn nút (và chỗ con trỏ bàn phím đang đứng) vẫn giữ nguyên. */}
+            <span className="card-inner" key={current.id}>
+              <span className="face front" aria-hidden={flipped}>
+                <span className="face-label">Câu hỏi</span>
+                <span className="face-text">{front}</span>
+                <span className="hint">Bấm vào thẻ<span className="on-keyboard"> hoặc phím <kbd>Space</kbd></span> để lật</span>
+              </span>
+              <span className="face back" aria-hidden={!flipped}>
+                <span className="face-label">Đáp án</span>
+                <span className="face-text">{back}</span>
+              </span>
             </span>
           </button>
           <p className="visually-hidden" aria-live="polite">{flipped ? `Đáp án: ${back}` : ''}</p>
