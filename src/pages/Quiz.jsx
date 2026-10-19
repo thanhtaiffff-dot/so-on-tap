@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
-import { formatDate, shuffle } from '../components/util.js'
+import { formatDate, quizCounts, shuffle } from '../components/util.js'
 
 function makeQuestions(cards, count, reverse) {
   const ask = (c) => (reverse ? c.back : c.front)
@@ -13,7 +13,7 @@ function makeQuestions(cards, count, reverse) {
 }
 
 export default function Quiz({ subject, cards }) {
-  const { state, dispatch } = useStore()
+  const { state, dispatch, newId } = useStore()
   const [count, setCount] = useState(10)
   const [reverse, setReverse] = useState(false)
   const [questions, setQuestions] = useState(null)
@@ -31,8 +31,10 @@ export default function Quiz({ subject, cards }) {
       </div>
     )
 
+  const chosen = Math.min(count, cards.length)
+
   function start() {
-    setQuestions(makeQuestions(cards, count, reverse))
+    setQuestions(makeQuestions(cards, chosen, reverse))
     setPos(0)
     setPicked(null)
     setAnswers([])
@@ -45,8 +47,10 @@ export default function Quiz({ subject, cards }) {
         <div className="field">
           <span className="label">Số câu</span>
           <div className="seg" role="radiogroup" aria-label="Số câu">
-            {[5, 10, 20].map((n) => (
-              <button key={n} type="button" role="radio" aria-checked={count === n} onClick={() => setCount(n)}>{Math.min(n, cards.length)}</button>
+            {quizCounts(cards.length).map((n) => (
+              <button key={n} type="button" role="radio" aria-checked={chosen === n} onClick={() => setCount(n)}>
+                {n === cards.length ? `Tất cả (${n})` : n}
+              </button>
             ))}
           </div>
         </div>
@@ -81,7 +85,7 @@ export default function Quiz({ subject, cards }) {
         </div>
         {wrong.length > 0 && (
           <div className="review">
-            <h3>Câu làm sai</h3>
+            <h2>Câu làm sai</h2>
             <ul>
               {wrong.map((w, i) => (
                 <li key={i}>
@@ -108,7 +112,7 @@ export default function Quiz({ subject, cards }) {
     const next = [...answers, { q, pick: opt, ok: opt === q.correct }]
     setAnswers(next)
     if (next.length === questions.length) {
-      dispatch({ type: 'quiz/record', subjectId: subject.id, score: next.filter((a) => a.ok).length, total: questions.length })
+      dispatch({ type: 'quiz/record', id: newId(), subjectId: subject.id, score: next.filter((a) => a.ok).length, total: questions.length })
     }
   }
 

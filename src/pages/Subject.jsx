@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
 import ConfirmButton from '../components/ConfirmButton.jsx'
@@ -16,11 +16,11 @@ export default function Subject() {
   const subject = state.subjects.find((s) => s.id === subjectId)
   const [name, setName] = useState(subject?.name ?? '')
   const [hue, setHue] = useState(subject?.hue ?? 222)
+  const cards = useMemo(() => state.cards.filter((c) => c.subjectId === subjectId), [state.cards, subjectId])
+  const notes = useMemo(() => state.notes.filter((n) => n.subjectId === subjectId), [state.notes, subjectId])
   if (!subject) return <Navigate to="/" replace />
 
   const base = `/mon/${subject.id}`
-  const cards = state.cards.filter((c) => c.subjectId === subject.id)
-  const notes = state.notes.filter((n) => n.subjectId === subject.id)
 
   function save(e) {
     e.preventDefault()
@@ -34,6 +34,7 @@ export default function Subject() {
       <div className="subject-head">
         {editing ? (
           <form className="row wrap" onSubmit={save}>
+            <h1 className="visually-hidden">{subject.name}</h1>
             <input id="subject-name" aria-label="Tên môn" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
             <div className="swatches" role="radiogroup" aria-label="Màu của môn">
               {HUES.map((h) => (
@@ -59,11 +60,12 @@ export default function Subject() {
         )}
       </div>
 
+      {/* replace: chuyển qua lại giữa các mục không tạo thêm bước "Quay lại" */}
       <nav className="tabs" aria-label="Chế độ ôn">
-        <NavLink to={`${base}/the-lat`}>Thẻ lật</NavLink>
-        <NavLink to={`${base}/trac-nghiem`}>Trắc nghiệm</NavLink>
-        <NavLink to={`${base}/ghi-chu`}>Ghi chú <span className="count">{notes.length}</span></NavLink>
-        <NavLink to={`${base}/the`}>Bộ thẻ <span className="count">{cards.length}</span></NavLink>
+        <NavLink replace to={`${base}/the-lat`}>Thẻ lật</NavLink>
+        <NavLink replace to={`${base}/trac-nghiem`}>Trắc nghiệm</NavLink>
+        <NavLink replace to={`${base}/ghi-chu`}>Ghi chú <span className="count">{notes.length}</span></NavLink>
+        <NavLink replace to={`${base}/the`}>Bộ thẻ <span className="count">{cards.length}</span></NavLink>
       </nav>
 
       <Routes>

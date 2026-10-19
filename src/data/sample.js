@@ -1,16 +1,26 @@
 // Dữ liệu mẫu cho lần mở trang đầu tiên, để thấy ngay trang làm được gì.
-const uid = () => crypto.randomUUID()
+import { uid } from './uuid.js'
+import { VERSION } from './schema.js'
 
-export function makeSample() {
+export function makeSample(now = Date.now()) {
   const en = uid()
   const ly = uid()
-  const now = Date.now()
-  const c = (subjectId, front, back) => ({ id: uid(), subjectId, front, back, box: 0, reviewedAt: 0 })
+  let n = 0
+  const c = (subjectId, front, back) => ({
+    id: uid(),
+    subjectId,
+    front,
+    back,
+    box: 0,
+    reviewedAt: 0,
+    leveledAt: 0,
+    createdAt: now + n++,
+  })
   return {
-    version: 1,
+    version: VERSION,
     subjects: [
       { id: en, name: 'Tiếng Anh', hue: 222, createdAt: now },
-      { id: ly, name: 'Vật lý', hue: 152, createdAt: now - 1 },
+      { id: ly, name: 'Vật lý', hue: 152, createdAt: now + 1 },
     ],
     cards: [
       c(en, 'ambitious', 'tham vọng, có hoài bão'),

@@ -3,6 +3,17 @@ import { useEffect, useState } from 'react'
 const KEY = 'so-on-tap:theme'
 const ORDER = ['system', 'light', 'dark']
 const LABEL = { system: 'Theo máy', light: 'Sáng', dark: 'Tối' }
+const BAR = { light: '#f5f6fa', dark: '#11142a' }
+
+// Màu thanh trạng thái (điện thoại, ứng dụng đã cài) theo giao diện đang chọn.
+function syncThemeColor(mode) {
+  for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
+    m.dataset.media ??= m.media
+    m.dataset.color ??= m.content
+    m.media = mode === 'system' ? m.dataset.media : ''
+    m.content = mode === 'system' ? m.dataset.color : BAR[mode]
+  }
+}
 
 function read() {
   try {
@@ -18,6 +29,7 @@ export default function ThemeToggle() {
     const root = document.documentElement
     if (mode === 'system') root.removeAttribute('data-theme')
     else root.setAttribute('data-theme', mode)
+    syncThemeColor(mode)
     try {
       localStorage.setItem(KEY, mode)
     } catch {

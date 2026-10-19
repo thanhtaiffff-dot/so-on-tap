@@ -25,3 +25,18 @@ export function parseBulk(text) {
   }
   return items
 }
+
+export const sameDay = (a, b) => new Date(a).toDateString() === new Date(b).toDateString()
+
+// Hộp Leitner: nhớ thì lên một hộp (thẻ ít hiện lại hơn), quên thì về hộp 0.
+// Mỗi thẻ chỉ lên được một hộp mỗi ngày, nên phải nhớ ở 3 ngày khác nhau mới tính là đã thuộc.
+export function review(card, remembered, now) {
+  if (!remembered) return { ...card, box: 0, reviewedAt: now, leveledAt: 0 }
+  if (card.leveledAt && sameDay(card.leveledAt, now)) return { ...card, reviewedAt: now }
+  return { ...card, box: Math.min(5, card.box + 1), reviewedAt: now, leveledAt: now }
+}
+
+// Các lựa chọn số câu trắc nghiệm: chỉ những mức nhỏ hơn số thẻ, rồi thêm "Tất cả".
+export function quizCounts(total) {
+  return [...[5, 10, 20].filter((n) => n < total), total]
+}

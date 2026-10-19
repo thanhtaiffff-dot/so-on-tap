@@ -1,0 +1,25 @@
+# Dependabot tự mở đề xuất cập nhật thư viện mỗi tuần; bộ kiểm tra tự động chạy trên từng đề xuất trước khi gộp.
+# Bản mới phải ra được 7 ngày mới cập nhật (tránh bản lỗi hoặc bị chèn mã độc vừa phát hành).
+# Bản vá lỗ hổng bảo mật không phải chờ: cooldown chỉ áp dụng cho cập nhật thường.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cap-nhat-nho:
+        patterns: ['*']
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ['*']

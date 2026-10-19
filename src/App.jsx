@@ -3,6 +3,8 @@ import Home from './pages/Home.jsx'
 import Subject from './pages/Subject.jsx'
 import Settings from './pages/Settings.jsx'
 import ThemeToggle from './components/ThemeToggle.jsx'
+import Banners from './components/Banners.jsx'
+import { StoreGate } from './data/store.jsx'
 
 export default function App() {
   return (
@@ -19,12 +21,15 @@ export default function App() {
         </nav>
       </header>
       <main className="page">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/mon/:subjectId/*" element={<Subject />} />
-          <Route path="/cai-dat" element={<Settings />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <StoreGate>
+          <Banners />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/mon/:subjectId/*" element={<Subject />} />
+            <Route path="/cai-dat" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </StoreGate>
       </main>
     </div>
   )
