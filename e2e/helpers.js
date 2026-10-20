@@ -12,6 +12,20 @@ export async function openSubject(page, name = 'Tiếng Anh') {
   await expect(page.locator('h1')).toHaveText(name)
 }
 
+// Đợi các hiệu ứng xuất hiện chạy xong (khối trượt lên, màu nền đổi theo môn),
+// kể cả hiệu ứng vừa bắt đầu ở khung hình kế tiếp.
+export async function waitAnimations(page) {
+  await page.evaluate(async () => {
+    const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+    for (let i = 0; i < 10; i++) {
+      await frames()
+      const running = document.getAnimations().filter((a) => a.playState === 'running')
+      if (!running.length) return
+      await Promise.all(running.map((a) => a.finished.catch(() => {})))
+    }
+  })
+}
+
 export async function tab(page, name) {
   await page.locator('.tabs a', { hasText: name }).click()
 }

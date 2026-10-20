@@ -1,9 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#2f4fd6"/>
-  <g transform="translate(256 256) scale(1) rotate(-6) translate(-256 -256)">
-    <rect x="96" y="136" width="320" height="240" rx="22" fill="#fff" stroke="#1a2038" stroke-width="16"/>
-    <path d="M104 206h304M104 256h304M104 306h304" stroke="#c9d6f2" stroke-width="12"/>
-    <path d="M188 231h168" stroke="#ffe36e" stroke-width="26" stroke-linecap="round"/>
-    <path d="M160 144v224" stroke="#f08a8a" stroke-width="14"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff8a5c"/>
+      <stop offset="0.55" stop-color="#ff4f64"/>
+      <stop offset="1" stop-color="#e02f5c"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.28"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#7a0016" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#shine)"/>
+  <g transform="translate(256 256) scale(1) translate(-256 -256)">
+    <rect x="166" y="118" width="240" height="176" rx="40" fill="#fff" fill-opacity="0.5" transform="rotate(8 286 206)"/>
+    <g filter="url(#shadow)" transform="rotate(-7 246 286)">
+      <rect x="106" y="186" width="280" height="200" rx="44" fill="#fff"/>
+      <path d="M160 262h120M160 310h76" stroke="#ff4f64" stroke-opacity="0.35" stroke-width="22" stroke-linecap="round"/>
+    </g>
   </g>
 </svg>

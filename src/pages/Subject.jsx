@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../data/store.jsx'
 import ConfirmButton from '../components/ConfirmButton.jsx'
 import { HUES } from '../components/util.js'
+import Icon, { initial } from '../components/Icon.jsx'
+import { DEFAULT_HUE, setAmbientHue } from '../components/ambient.js'
 import Flashcards from './Flashcards.jsx'
 import Quiz from './Quiz.jsx'
 import Notes from './Notes.jsx'
@@ -18,6 +20,15 @@ export default function Subject() {
   const [hue, setHue] = useState(subject?.hue ?? 222)
   const cards = useMemo(() => state.cards.filter((c) => c.subjectId === subjectId), [state.cards, subjectId])
   const notes = useMemo(() => state.notes.filter((n) => n.subjectId === subjectId), [state.notes, subjectId])
+  const subjectHue = subject?.hue
+
+  // Nền phía sau lớp kính chuyển dần sang màu của môn đang mở, rời môn thì về màu mặc định.
+  useEffect(() => {
+    if (subjectHue == null) return
+    setAmbientHue(subjectHue)
+    return () => setAmbientHue(DEFAULT_HUE)
+  }, [subjectHue])
+
   if (!subject) return <Navigate to="/" replace />
 
   const base = `/mon/${subject.id}`
@@ -30,7 +41,7 @@ export default function Subject() {
   }
 
   return (
-    <div style={{ '--hue': subject.hue }}>
+    <div className="subject-page" style={{ '--hue': subject.hue }}>
       <div className="subject-head">
         {editing ? (
           <form className="row wrap" onSubmit={save}>
@@ -47,9 +58,12 @@ export default function Subject() {
           </form>
         ) : (
           <>
-            <div>
-              <p className="eyebrow subject-eyebrow">Môn học</p>
-              <h1>{subject.name}</h1>
+            <div className="subject-title">
+              <span className="subject-icon lg" aria-hidden="true">{initial(subject.name)}</span>
+              <div>
+                <p className="eyebrow">Môn học</p>
+                <h1>{subject.name}</h1>
+              </div>
             </div>
             <div className="row">
               <button type="button" className="btn ghost" onClick={() => { setName(subject.name); setHue(subject.hue); setEditing(true) }}>Đổi tên</button>
@@ -62,10 +76,10 @@ export default function Subject() {
 
       {/* replace: chuyển qua lại giữa các mục không tạo thêm bước "Quay lại" */}
       <nav className="tabs" aria-label="Chế độ ôn">
-        <NavLink replace to={`${base}/the-lat`}>Thẻ lật</NavLink>
-        <NavLink replace to={`${base}/trac-nghiem`}>Trắc nghiệm</NavLink>
-        <NavLink replace to={`${base}/ghi-chu`}>Ghi chú <span className="count">{notes.length}</span></NavLink>
-        <NavLink replace to={`${base}/the`}>Bộ thẻ <span className="count">{cards.length}</span></NavLink>
+        <NavLink replace to={`${base}/the-lat`}><Icon name="cards" size={16} />Thẻ lật</NavLink>
+        <NavLink replace to={`${base}/trac-nghiem`}><Icon name="quiz" size={16} />Trắc nghiệm</NavLink>
+        <NavLink replace to={`${base}/ghi-chu`}><Icon name="note" size={16} />Ghi chú <span className="count">{notes.length}</span></NavLink>
+        <NavLink replace to={`${base}/the`}><Icon name="list" size={16} />Bộ thẻ <span className="count">{cards.length}</span></NavLink>
       </nav>
 
       <Routes>
