@@ -37,10 +37,11 @@ export async function waitSaved(page) {
 }
 
 // Nạp sẵn nhiều dữ liệu theo cách lưu cũ (localStorage), trang sẽ tự chuyển sang cách lưu mới khi mở.
-export async function seedLegacy(page, { cards = 0, notes = 0, noteLen = 100 } = {}) {
+// `reviewed` thẻ đầu tiên đã ôn từ `daysAgo` ngày trước (hộp 2 của bản cũ, nên giờ đã đến hạn ôn lại).
+export async function seedLegacy(page, { cards = 0, notes = 0, noteLen = 100, reviewed = 0, daysAgo = 10 } = {}) {
   await page.goto('./robots.txt')
   await page.evaluate(
-    ([cards, notes, noteLen]) => {
+    ([cards, notes, noteLen, reviewed, daysAgo]) => {
       const now = Date.now()
       const d = {
         version: 1,
@@ -52,12 +53,20 @@ export async function seedLegacy(page, { cards = 0, notes = 0, noteLen = 100 } =
         notes: [],
         quizHistory: [],
       }
-      for (let i = 0; i < cards; i++)
-        d.cards.push({ id: `c${i}`, subjectId: 'en', front: `word number ${i}`, back: `nghĩa tiếng Việt khá dài số ${i}`, box: 0, reviewedAt: 0 })
+      for (let i = 0; i < cards; i++) {
+        const old = i < reviewed
+        d.cards.push({ id: `c${i}`, subjectId: 'en', front: `word number ${i}`, back: `nghĩa tiếng Việt khá dài số ${i}`, box: old ? 2 : 0, reviewedAt: old ? now - daysAgo * 864e5 : 0 })
+      }
       for (let i = 0; i < notes; i++)
         d.notes.push({ id: `n${i}`, subjectId: 'en', title: `Ghi chú ${i}`, body: 'Nội dung ôn tập '.repeat(noteLen), updatedAt: now - i })
       localStorage.setItem('so-on-tap:v1', JSON.stringify(d))
     },
-    [cards, notes, noteLen],
+    [cards, notes, noteLen, reviewed, daysAgo],
   )
+}
+
+// Lật thẻ đang hiện rồi chấm (Quên, Khó, Nhớ hoặc Dễ).
+export async function gradeCard(page, label) {
+  await page.click('.flashcard')
+  await page.getByRole('button', { name: new RegExp(`^${label}`) }).click()
 }

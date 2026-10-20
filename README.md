@@ -1,7 +1,15 @@
 # Sổ Ôn Tập
 
-Trang web ôn tập: thẻ lật, trắc nghiệm chấm điểm, ghi chú theo môn. Viết bằng React + Vite.
+Trang web ôn tập: thẻ lật có lịch ôn thông minh, trắc nghiệm chấm điểm có lời giải, ghi chú theo môn. Viết bằng React + Vite.
 Không cần tài khoản: dữ liệu nằm ngay trong trình duyệt của từng máy. Cài được như app và dùng được khi mất mạng.
+
+## Lịch ôn thông minh
+- Thẻ lật dùng thuật toán FSRS (thư viện [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs), cùng thuật toán Anki đang dùng). Lật thẻ xong thì tự chấm: **Quên**, **Khó**, **Nhớ** hoặc **Dễ**. Dưới mỗi nút ghi lúc thẻ sẽ được hỏi lại.
+- Thẻ hay quên được hỏi lại sau vài phút, thẻ nhớ chắc thì vài ngày, vài tuần, rồi vài tháng mới hỏi lại: hỏi đúng lúc sắp quên là cách nhớ lâu nhất.
+- Trang chủ có ô **Hôm nay**: mỗi môn còn bao nhiêu thẻ đến hạn và thẻ mới. Mỗi môn học tối đa 20 thẻ mới mỗi ngày (bấm "Học thêm thẻ mới" nếu muốn học thêm), để bài ôn của những ngày sau không bị dồn.
+- "Ôn tự do" để ôn mọi thẻ bất cứ lúc nào; kết quả vẫn được tính vào lịch ôn.
+- Thẻ **đã thuộc** là thẻ nhớ được ít nhất 3 tuần. Một ngày ôn tính từ 4 giờ sáng, nên thức khuya ôn bài vẫn tính là hôm trước.
+- Trắc nghiệm chọn sai thì có lời giải: đáp án đúng, đáp án vừa chọn là của câu nào, và phần giải thích của thẻ (nếu có). Làm xong có nút làm lại các câu sai (lượt làm lại chỉ để luyện, không tính vào lịch sử điểm).
 
 ## Chạy thử trên máy
 1. Cài Node.js bản LTS từ https://nodejs.org (bản 22 trở lên)
@@ -21,6 +29,7 @@ Không cần tài khoản: dữ liệu nằm ngay trong trình duyệt của t�
 - `src/pages/`: từng trang (Trang chủ, Thẻ lật, Trắc nghiệm, Ghi chú, Bộ thẻ, Cài đặt)
 - `src/data/`: dữ liệu và cách lưu
   - `schema.js`: dữ liệu gồm những gì, kiểm tra và làm sạch file sao lưu
+  - `srs.js`: lịch ôn (chấm thẻ, thẻ nào đến hạn, thẻ mới mỗi ngày, thứ tự thẻ trong một lượt ôn)
   - `db.js`, `persist.js`: lưu vào máy bằng IndexedDB
   - `store.jsx`: mọi thay đổi dữ liệu đi qua đây; sau này thêm đăng nhập Google cũng sửa ở đây
 - `src/pwa.js`, `vite.config.js`: cài như app, dùng khi mất mạng (service worker tự tạo lúc build)
@@ -37,7 +46,8 @@ Giao diện tối kiểu Raycast là mặc định, có hiệu ứng kính mờ 
 |---|---|---|
 | Mọi trang | Ctrl + K (Mac: ⌘ + K) | Mở Tìm nhanh: tìm môn, ghi chú, lệnh; gõ không dấu vẫn ra |
 | Tìm nhanh | ↑ ↓, Enter, Esc | Chọn, mở, đóng |
-| Thẻ lật | Space, ← → | Lật thẻ; lật xong thì ← là Chưa nhớ, → là Nhớ rồi |
+| Thẻ lật | Space | Lật thẻ |
+| Thẻ lật (đã lật) | 1, 2, 3, 4 (hoặc ←, →) | Chấm Quên, Khó, Nhớ, Dễ; ← là Quên, → là Nhớ |
 | Trắc nghiệm | A đến D (hoặc 1 đến 4), Enter | Chọn đáp án, sang câu tiếp |
 
 ## Dữ liệu được lưu thế nào

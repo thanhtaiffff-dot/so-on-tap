@@ -6,9 +6,18 @@ import { formatDate, quizCounts, shuffle } from '../components/util.js'
 function makeQuestions(cards, count, reverse) {
   const ask = (c) => (reverse ? c.back : c.front)
   const ans = (c) => (reverse ? c.front : c.back)
+  // Mỗi đáp án là của câu nào, để khi chọn sai thì giải thích được "đáp án bạn chọn là của câu khác".
+  const owner = new Map()
+  for (const c of cards) if (!owner.has(ans(c))) owner.set(ans(c), ask(c))
   return shuffle(cards).slice(0, count).map((card) => {
-    const wrong = shuffle([...new Set(cards.filter((c) => c.id !== card.id).map(ans))].filter((t) => t !== ans(card))).slice(0, 3)
-    return { prompt: ask(card), correct: ans(card), options: shuffle([ans(card), ...wrong]) }
+    const wrong = shuffle([...owner.keys()].filter((t) => t !== ans(card))).slice(0, 3)
+    return {
+      prompt: ask(card),
+      correct: ans(card),
+      note: card.note,
+      options: shuffle([ans(card), ...wrong]),
+      owners: Object.fromEntries(wrong.map((t) => [t, owner.get(t)])),
+    }
   })
 }
 
@@ -17,6 +26,8 @@ export default function Quiz({ subject, cards }) {
   const [count, setCount] = useState(10)
   const [reverse, setReverse] = useState(false)
   const [questions, setQuestions] = useState(null)
+  // Lượt làm lại các câu sai: chỉ để luyện, không ghi vào lịch sử điểm.
+  const [redo, setRedo] = useState(false)
   const [pos, setPos] = useState(0)
   const [picked, setPicked] = useState(null)
   const [answers, setAnswers] = useState([])
@@ -33,8 +44,9 @@ export default function Quiz({ subject, cards }) {
 
   const chosen = Math.min(count, cards.length)
 
-  function start() {
-    setQuestions(makeQuestions(cards, chosen, reverse))
+  function start(list = makeQuestions(cards, chosen, reverse), again = false) {
+    setQuestions(list)
+    setRedo(again)
     setPos(0)
     setPicked(null)
     setAnswers([])
@@ -58,7 +70,7 @@ export default function Quiz({ subject, cards }) {
           <input id="quiz-reverse" type="checkbox" checked={reverse} onChange={(e) => setReverse(e.target.checked)} />
           Hỏi ngược (cho đáp án, chọn câu hỏi)
         </label>
-        <button type="button" className="btn big-btn" onClick={start}>Bắt đầu</button>
+        <button type="button" className="btn big-btn" onClick={() => start()}>Bắt đầu</button>
         {history.length > 0 && (
           <div className="history">
             <h3 className="eyebrow">Các lần gần đây</h3>
@@ -79,9 +91,13 @@ export default function Quiz({ subject, cards }) {
     return (
       <section className="study narrow">
         <div className="result">
-          <p className="eyebrow">Kết quả</p>
+          <p className="eyebrow">{redo ? 'Kết quả làm lại câu sai' : 'Kết quả'}</p>
           <p className="big num">{score}/{questions.length}</p>
-          <p className="muted num">Quy ra thang 10: <b>{grade.toLocaleString('vi-VN')}</b> điểm</p>
+          {redo ? (
+            <p className="muted">Lượt làm lại chỉ để luyện, không tính vào lịch sử điểm.</p>
+          ) : (
+            <p className="muted num">Quy ra thang 10: <b>{grade.toLocaleString('vi-VN')}</b> điểm</p>
+          )}
         </div>
         {wrong.length > 0 && (
           <div className="review">
@@ -92,13 +108,19 @@ export default function Quiz({ subject, cards }) {
                   <b>{w.q.prompt}</b>
                   <span className="bad-text">Bạn chọn: {w.pick}</span>
                   <span className="good-text">Đáp án: {w.q.correct}</span>
+                  <Explain q={w.q} pick={w.pick} short />
                 </li>
               ))}
             </ul>
           </div>
         )}
-        <div className="row">
-          <button type="button" className="btn" onClick={start}>Làm bài mới</button>
+        <div className="row wrap">
+          {wrong.length > 0 && (
+            <button type="button" className="btn" onClick={() => start(shuffle(wrong.map((w) => ({ ...w.q, options: shuffle(w.q.options) }))), true)}>
+              Làm lại {wrong.length} câu sai
+            </button>
+          )}
+          <button type="button" className={wrong.length ? 'btn ghost' : 'btn'} onClick={() => start()}>Làm bài mới</button>
           <button type="button" className="btn ghost" onClick={() => setQuestions(null)}>Đổi cài đặt</button>
         </div>
       </section>
@@ -111,7 +133,7 @@ export default function Quiz({ subject, cards }) {
     setPicked(opt)
     const next = [...answers, { q, pick: opt, ok: opt === q.correct }]
     setAnswers(next)
-    if (next.length === questions.length) {
+    if (next.length === questions.length && !redo) {
       dispatch({ type: 'quiz/record', id: newId(), subjectId: subject.id, score: next.filter((a) => a.ok).length, total: questions.length })
     }
   }
@@ -119,6 +141,21 @@ export default function Quiz({ subject, cards }) {
   return (
     <Question key={pos} q={q} pos={pos} total={questions.length} right={answers.filter((a) => a.ok).length}
       picked={picked} onPick={pick} onNext={() => { setPos(pos + 1); setPicked(null) }} />
+  )
+}
+
+// Lời giải sau mỗi câu: đáp án đúng, đáp án vừa chọn là của câu nào, và phần giải thích của thẻ (nếu có).
+// `short`: trong danh sách câu sai (đã ghi sẵn "Bạn chọn" và "Đáp án") thì chỉ thêm phần còn lại.
+function Explain({ q, pick, short = false }) {
+  const wrong = pick !== q.correct
+  const other = wrong ? q.owners?.[pick] : null
+  if (!(wrong && !short) && !other && !q.note) return null
+  return (
+    <div className="explain">
+      {wrong && !short && <p>Đáp án đúng: <b>{q.correct}</b></p>}
+      {other && <p className="muted">“{pick}” là đáp án của câu “{other}”.</p>}
+      {q.note && <p><span className="explain-label">Giải thích</span>{q.note}</p>}
+    </div>
   )
 }
 
@@ -164,11 +201,14 @@ function Question({ q, pos, total, right, picked, onPick, onNext }) {
         })}
       </div>
       {picked !== null && (
-        <div className="row between feedback" role="status">
-          <b className={picked === q.correct ? 'good-text' : 'bad-text'}>{picked === q.correct ? 'Chính xác!' : 'Chưa đúng'}</b>
-          <button type="button" className="btn" autoFocus onClick={onNext}>
-            {pos + 1 === total ? 'Xem kết quả' : 'Câu tiếp'} <kbd aria-hidden="true">↵</kbd>
-          </button>
+        <div className="feedback" role="status">
+          <div className="row between">
+            <b className={picked === q.correct ? 'good-text' : 'bad-text'}>{picked === q.correct ? 'Chính xác!' : 'Chưa đúng'}</b>
+            <button type="button" className="btn" autoFocus onClick={onNext}>
+              {pos + 1 === total ? 'Xem kết quả' : 'Câu tiếp'} <kbd aria-hidden="true">↵</kbd>
+            </button>
+          </div>
+          <Explain q={q} pick={picked} />
         </div>
       )}
     </section>

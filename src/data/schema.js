@@ -2,9 +2,11 @@
 // Dùng khi đọc từ máy, khi chuyển dữ liệu cũ sang cách lưu mới và khi nhập file sao lưu,
 // để file lạ hoặc bị sửa bậy không làm hỏng trang.
 import { uid } from './uuid.js'
+import { NEW, RELEARNING, S_MIN, blank, fromBox } from './srs.js'
 
-export const VERSION = 2
-export const LIMITS = { name: 60, front: 500, back: 500, title: 120, body: 20000 }
+// Phiên bản 3: thẻ có lịch ôn FSRS và phần giải thích.
+export const VERSION = 3
+export const LIMITS = { name: 60, front: 500, back: 500, note: 1000, title: 120, body: 20000 }
 export const QUIZ_KEEP = 200
 export const STORES = ['subjects', 'cards', 'notes', 'quizHistory']
 
@@ -30,11 +32,30 @@ export function normalize(data) {
   return out
 }
 
-const MAX_TIME = 9e15
+// Thời gian trong dữ liệu không quá năm 9999, để các phép tính ngày ôn luôn ra một ngày hợp lệ.
+const MAX_TIME = Date.UTC(9999, 11, 31)
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '')
 const id = (v) => (typeof v === 'string' && /^[\w-]{1,64}$/.test(v) ? v : null)
 const num = (v, min, max, d) => (Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : d)
+const int = (v, min, max, d) => Math.round(num(v, min, max, d))
 const list = (v) => (Array.isArray(v) ? v : [])
+
+// Phần lịch ôn của thẻ. Thẻ của bản trước (chỉ có "hộp" 0 đến 5) được chuyển sang lịch ôn mới.
+function schedule(c) {
+  if (!Number.isInteger(c?.state) || c.state < NEW || c.state > RELEARNING) return fromBox(int(c?.box, 0, 5, 0), num(c?.reviewedAt, 0, MAX_TIME, 0))
+  if (c.state === NEW) return blank()
+  return {
+    state: c.state,
+    due: num(c.due, 0, MAX_TIME, 0),
+    stability: num(c.stability, S_MIN, 1e5, 1),
+    difficulty: num(c.difficulty, 1, 10, 5),
+    step: int(c.step, 0, 9, 0),
+    reps: int(c.reps, 1, 1e6, 1),
+    lapses: int(c.lapses, 0, 1e6, 0),
+    reviewedAt: num(c.reviewedAt, 0, MAX_TIME, 0),
+    learnedAt: num(c.learnedAt, 0, MAX_TIME, 0),
+  }
+}
 
 function unique(items) {
   const seen = new Set()
@@ -79,11 +100,10 @@ export function sanitize(input, { now = Date.now(), ordered = true } = {}) {
         subjectId: id(c?.subjectId),
         front: str(c?.front, LIMITS.front).trim(),
         back: str(c?.back, LIMITS.back).trim(),
-        box: Math.round(num(c?.box, 0, 5, 0)),
-        reviewedAt: num(c?.reviewedAt, 0, MAX_TIME, 0),
-        leveledAt: num(c?.leveledAt, 0, MAX_TIME, 0),
+        note: str(c?.note, LIMITS.note).trim(),
         // Bản cũ (v1) chưa có thời điểm tạo: lấy theo vị trí trong danh sách.
         createdAt: num(c?.createdAt, 0, MAX_TIME, i),
+        ...schedule(c),
       })),
     ).filter((c) => ok.has(c.subjectId) && c.front && c.back),
     ordered,

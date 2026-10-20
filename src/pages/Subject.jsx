@@ -5,6 +5,8 @@ import ConfirmButton from '../components/ConfirmButton.jsx'
 import { HUES } from '../components/util.js'
 import Icon, { initial } from '../components/Icon.jsx'
 import { DEFAULT_HUE, setAmbientHue } from '../components/ambient.js'
+import { useNow } from '../components/useNow.js'
+import { today } from '../data/srs.js'
 import Flashcards from './Flashcards.jsx'
 import Quiz from './Quiz.jsx'
 import Notes from './Notes.jsx'
@@ -21,6 +23,11 @@ export default function Subject() {
   const cards = useMemo(() => state.cards.filter((c) => c.subjectId === subjectId), [state.cards, subjectId])
   const notes = useMemo(() => state.notes.filter((n) => n.subjectId === subjectId), [state.notes, subjectId])
   const subjectHue = subject?.hue
+  const now = useNow()
+  const todo = useMemo(() => {
+    const t = today(cards, now)
+    return t.due.length + t.fresh.length
+  }, [cards, now])
 
   // Nền phía sau lớp kính chuyển dần sang màu của môn đang mở, rời môn thì về màu mặc định.
   useEffect(() => {
@@ -76,7 +83,9 @@ export default function Subject() {
 
       {/* replace: chuyển qua lại giữa các mục không tạo thêm bước "Quay lại" */}
       <nav className="tabs" aria-label="Chế độ ôn">
-        <NavLink replace to={`${base}/the-lat`}><Icon name="cards" size={16} />Thẻ lật</NavLink>
+        <NavLink replace to={`${base}/the-lat`}>
+          <Icon name="cards" size={16} />Thẻ lật {todo > 0 && <span className="count" title="Số thẻ cần ôn hôm nay">{todo}</span>}
+        </NavLink>
         <NavLink replace to={`${base}/trac-nghiem`}><Icon name="quiz" size={16} />Trắc nghiệm</NavLink>
         <NavLink replace to={`${base}/ghi-chu`}><Icon name="note" size={16} />Ghi chú <span className="count">{notes.length}</span></NavLink>
         <NavLink replace to={`${base}/the`}><Icon name="list" size={16} />Bộ thẻ <span className="count">{cards.length}</span></NavLink>

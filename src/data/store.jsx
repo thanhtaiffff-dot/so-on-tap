@@ -6,7 +6,7 @@ import { QUIZ_KEEP, emptyData, sanitize } from './schema.js'
 import { makeSample } from './sample.js'
 import { downloadBackup } from './backup.js'
 import { uid } from './uuid.js'
-import { review } from '../components/util.js'
+import { blank, grade } from './srs.js'
 
 const StoreContext = createContext(null)
 const SaveContext = createContext(null)
@@ -45,19 +45,22 @@ export function reducer(state, a) {
         subjectId: a.subjectId,
         front: it.front,
         back: it.back,
-        box: 0,
-        reviewedAt: 0,
-        leveledAt: 0,
+        note: it.note ?? '',
         createdAt: t + i,
+        ...blank(),
       }))
       return { ...state, cards: [...state.cards, ...added] }
     }
     case 'card/update':
-      return { ...state, cards: state.cards.map((c) => (c.id === a.id ? { ...c, front: a.front, back: a.back } : c)) }
+      return {
+        ...state,
+        cards: state.cards.map((c) => (c.id === a.id ? { ...c, front: a.front, back: a.back, note: a.note ?? c.note } : c)),
+      }
     case 'card/delete':
       return { ...state, cards: state.cards.filter((c) => c.id !== a.id) }
-    case 'card/review':
-      return { ...state, cards: state.cards.map((c) => (c.id === a.id ? review(c, a.remembered, a.now) : c)) }
+    // Chấm một thẻ khi ôn (a.rating: 1 Quên, 2 Khó, 3 Nhớ, 4 Dễ) và hẹn lần ôn tới theo FSRS.
+    case 'card/grade':
+      return { ...state, cards: state.cards.map((c) => (c.id === a.id ? grade(c, a.rating, a.now) : c)) }
     case 'note/add':
       return {
         ...state,
