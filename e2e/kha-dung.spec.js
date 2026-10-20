@@ -7,26 +7,27 @@ for (const theme of ['light', 'dark']) {
   test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${theme === 'light' ? 'sáng' : 'tối'})`, async ({ page }) => {
     await page.addInitScript((t) => localStorage.setItem('so-on-tap:giao-dien', t), theme)
     const problems = []
-    const scan = async (screen) => {
-      // Đợi các hiệu ứng xuất hiện chạy xong, để đo độ tương phản trên màu thật.
+    // ready: một phần tử của màn hình cần quét. Chuyển trang chạy sau cú bấm một chút, nên phải đợi
+    // màn hình mới hiện ra rồi mới đợi hiệu ứng xuất hiện chạy xong, để đo độ tương phản trên màu thật.
+    const scan = async (screen, ready) => {
+      await expect(ready).toBeVisible()
       await waitAnimations(page)
-      await page.waitForTimeout(50)
       const r = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'best-practice']).analyze()
       for (const v of r.violations) problems.push(`${screen}: ${v.id} (${v.nodes.map((n) => n.target.join(' ')).join(', ')})`)
     }
     await openSubject(page)
-    await scan('thẻ lật')
+    await scan('thẻ lật', page.locator('.flashcard'))
     await page.click('.flashcard')
     await page.waitForTimeout(600)
-    await scan('thẻ lật, mặt sau')
+    await scan('thẻ lật, mặt sau', page.locator('.flashcard.is-flipped'))
     await page.getByRole('button', { name: 'Đổi tên' }).click()
-    await scan('đổi tên môn')
+    await scan('đổi tên môn', page.locator('#subject-name'))
     await page.getByRole('button', { name: 'Huỷ' }).click()
     await tab(page, 'Trắc nghiệm')
-    await scan('cài đặt trắc nghiệm')
+    await scan('cài đặt trắc nghiệm', page.getByRole('button', { name: 'Bắt đầu' }))
     await page.getByRole('button', { name: 'Bắt đầu' }).click()
     await page.locator('.option').first().click()
-    await scan('câu hỏi')
+    await scan('câu hỏi', page.locator('.feedback'))
     for (let i = 0; i < 10; i++) {
       const next = page.locator('.feedback .btn')
       if (!(await next.count())) break
@@ -35,21 +36,21 @@ for (const theme of ['light', 'dark']) {
       if (last) break
       await page.locator('.option').nth(1).click()
     }
-    await scan('kết quả trắc nghiệm')
+    await scan('kết quả trắc nghiệm', page.locator('.result'))
     await tab(page, 'Ghi chú')
-    await scan('danh sách ghi chú')
+    await scan('danh sách ghi chú', page.locator('.note-item').first())
     await page.locator('.note-item').first().click()
-    await scan('soạn ghi chú')
+    await scan('soạn ghi chú', page.locator('#note-title'))
     await tab(page, 'Bộ thẻ')
     await page.getByRole('button', { name: 'Thêm nhiều thẻ cùng lúc' }).click()
-    await scan('bộ thẻ')
+    await scan('bộ thẻ', page.locator('#card-bulk'))
     await page.getByRole('link', { name: 'Cài đặt' }).click()
-    await scan('cài đặt')
+    await scan('cài đặt', page.locator('.settings h1'))
     await page.getByRole('link', { name: 'Môn học' }).click()
-    await scan('trang chủ')
+    await scan('trang chủ', page.locator('#new-subject'))
     await page.getByRole('button', { name: 'Tìm nhanh' }).click()
     await page.getByRole('combobox').fill('anh')
-    await scan('tìm nhanh')
+    await scan('tìm nhanh', page.locator('.pal-item').first())
     expect(problems).toEqual([])
   })
 }
