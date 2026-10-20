@@ -3,10 +3,24 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { gradeCard, openSubject, tab, waitAnimations } from './helpers.js'
 
-for (const theme of ['light', 'dark']) {
-  test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${theme === 'light' ? 'sáng' : 'tối'})`, async ({ page }) => {
+// Hai giao diện mặc định, cùng các bộ nền và màu nhấn tự chỉnh (Cài đặt → Giao diện), phối theo kiểu khó đọc nhất:
+// màu nhấn nhạt trên nền sáng, nút tô màu nhấn, chữ rất lớn, tương phản cao.
+const LOOKS = [
+  { name: 'sáng', mode: 'light' },
+  { name: 'tối', mode: 'dark' },
+  { name: 'đen OLED, xanh dương, nút màu nhấn, chữ có chân', mode: 'dark', look: { dark: 'oled', accent: '#4f7cff', primary: 'accent', font: 'serif' } },
+  { name: 'xám dịu, xanh ngọc, vệt màu theo màu nhấn', mode: 'dark', look: { dark: 'dim', accent: '#2dd4bf', ambient: 'accent', round: 'round' } },
+  { name: 'giấy kem, vàng, nút màu nhấn, chữ rất lớn', mode: 'light', look: { light: 'paper', accent: '#f5c518', primary: 'accent', size: '125' } },
+  { name: 'sáng, hồng, nút màu nhấn, tương phản cao', mode: 'light', look: { accent: '#f472b6', primary: 'accent', contrast: 'high', ambient: 'accent' } },
+]
+
+for (const { name, mode, look } of LOOKS) {
+  test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${name})`, async ({ page }) => {
     test.slow() // quét hơn chục màn hình
-    await page.addInitScript((t) => localStorage.setItem('so-on-tap:giao-dien', t), theme)
+    await page.addInitScript(([m, l]) => {
+      localStorage.setItem('so-on-tap:giao-dien', m)
+      if (l) localStorage.setItem('so-on-tap:tuy-chinh', JSON.stringify(l))
+    }, [mode, look])
     const problems = []
     // ready: một phần tử của màn hình cần quét. Chuyển trang chạy sau cú bấm một chút, nên phải đợi
     // màn hình mới hiện ra rồi mới đợi hiệu ứng xuất hiện chạy xong, để đo độ tương phản trên màu thật.

@@ -50,6 +50,14 @@ const PATHS = {
   ),
   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
   arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
+  palette: (
+    <>
+      <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.5-1.9-.3-1.1.4-2.1 1.5-2.1H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z" />
+      <circle cx="7.5" cy="11.5" r="1.2" />
+      <circle cx="10.5" cy="7.5" r="1.2" />
+      <circle cx="15" cy="8" r="1.2" />
+    </>
+  ),
 }
 
 export default function Icon({ name, size = 18 }) {

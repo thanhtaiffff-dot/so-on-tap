@@ -258,8 +258,9 @@ test('mặc định là giao diện tối; đổi được, nhớ lựa chọn, 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
   await page.getByRole('button', { name: /Giao diện/ }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'system')
+  // Máy đổi sáng/tối thì trang đổi theo (do JavaScript đổi bộ nền, nên đợi một chút).
   await page.emulateMedia({ colorScheme: 'light' })
-  expect(await bg()).toBe('#f2f2f5')
+  await expect.poll(bg).toBe('#f2f2f5')
   await page.emulateMedia({ colorScheme: 'dark' })
-  expect(await bg()).toBe('#08080a')
+  await expect.poll(bg).toBe('#08080a')
 })

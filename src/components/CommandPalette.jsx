@@ -3,7 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useBackup, useStore } from '../data/store.jsx'
 import Icon, { initial } from './Icon.jsx'
 import { buildItems } from './palette.js'
-import { setTheme, useTheme } from './theme.js'
+import { applyPreset, setTheme, useAppearance } from './theme.js'
+import { PRESETS, presetActive } from './appearance.js'
 
 // Bảng "Tìm nhanh" kiểu Raycast: Ctrl/⌘ + K ở bất cứ đâu, gõ để tìm, ↑ ↓ để chọn, Enter để mở.
 const OPEN_EVENT = 'so-on-tap:tim-nhanh'
@@ -19,6 +20,9 @@ const COMMANDS = [
   { id: 'theme-dark', title: 'Giao diện tối', icon: 'moon', words: 'dark mode nen den' },
   { id: 'theme-light', title: 'Giao diện sáng', icon: 'sun', words: 'light mode nen trang' },
   { id: 'theme-system', title: 'Giao diện theo máy', icon: 'system', words: 'system tu dong' },
+  { id: 'appearance', title: 'Tùy chỉnh giao diện', icon: 'palette', words: 'tuy bien mau sac phong chu co chu nen chu de theme' },
+  // Chủ đề nhanh: chỉ hiện khi gõ tìm, để danh sách lệnh lúc mới mở không quá dài.
+  ...PRESETS.map((p) => ({ id: `preset-${p.id}`, title: `Chủ đề: ${p.label}`, icon: 'palette', words: 'giao dien theme mau', searchOnly: true })),
 ]
 
 export default function CommandPalette() {
@@ -79,7 +83,7 @@ function PaletteList({ state, close }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const backup = useBackup()
-  const theme = useTheme()
+  const { mode: theme, look } = useAppearance()
   const [query, setQuery] = useState('')
   const [sel, setSel] = useState(0)
   const items = useMemo(() => buildItems(state, query, COMMANDS), [state, query])
@@ -97,6 +101,8 @@ function PaletteList({ state, close }) {
     else if (item.cmd === 'settings') navigate('/cai-dat')
     else if (item.cmd === 'backup') backup()
     else if (item.cmd.startsWith('theme-')) setTheme(item.cmd.slice(6))
+    else if (item.cmd === 'appearance') navigate('/cai-dat', { state: { focus: 'giao-dien' } })
+    else if (item.cmd.startsWith('preset-')) applyPreset(PRESETS.find((p) => `preset-${p.id}` === item.cmd))
     else if (item.cmd === 'new-subject') {
       if (pathname === '/') document.getElementById('new-subject')?.focus()
       else navigate('/', { state: { focusNew: true } })
@@ -148,7 +154,9 @@ function PaletteList({ state, close }) {
                   )}
                   <span className="pal-title">{item.title}</span>
                   {item.subtitle && <span className="pal-sub">{item.subtitle}</span>}
-                  {item.cmd === `theme-${theme}` && <span className="pal-tag">Đang dùng</span>}
+                  {(item.cmd === `theme-${theme}` || PRESETS.some((p) => item.cmd === `preset-${p.id}` && presetActive(p, look, theme))) && (
+                    <span className="pal-tag">Đang dùng</span>
+                  )}
                 </div>
               ))}
             </div>

@@ -49,7 +49,7 @@ export function buildItems(state, query, commands) {
       add('Ghi chú', { id: `n-${n.id}`, title: n.title.trim() || 'Chưa đặt tiêu đề', subtitle: subject, icon: 'note', to: `/mon/${n.subjectId}/ghi-chu/${n.id}` },
         `${subject} ${n.body.slice(0, 300)}`)
     }
-  for (const c of commands) add('Lệnh', { id: `c-${c.id}`, title: c.title, icon: c.icon, cmd: c.id }, c.words)
+  for (const c of commands) if (searching || !c.searchOnly) add('Lệnh', { id: `c-${c.id}`, title: c.title, icon: c.icon, cmd: c.id }, c.words)
 
   return Object.entries(groups).flatMap(([name, list]) =>
     list

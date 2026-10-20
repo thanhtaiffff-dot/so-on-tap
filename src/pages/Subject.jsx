@@ -4,7 +4,7 @@ import { useStore } from '../data/store.jsx'
 import ConfirmButton from '../components/ConfirmButton.jsx'
 import { HUES } from '../components/util.js'
 import Icon, { initial } from '../components/Icon.jsx'
-import { DEFAULT_HUE, setAmbientHue } from '../components/ambient.js'
+import { setSubjectHue } from '../components/ambient.js'
 import { useNow } from '../components/useNow.js'
 import { today } from '../data/srs.js'
 import Flashcards from './Flashcards.jsx'
@@ -29,11 +29,11 @@ export default function Subject() {
     return t.due.length + t.fresh.length
   }, [cards, now])
 
-  // Nền phía sau lớp kính chuyển dần sang màu của môn đang mở, rời môn thì về màu mặc định.
+  // Nền phía sau lớp kính chuyển dần sang màu của môn đang mở, rời môn thì về màu nhấn.
   useEffect(() => {
     if (subjectHue == null) return
-    setAmbientHue(subjectHue)
-    return () => setAmbientHue(DEFAULT_HUE)
+    setSubjectHue(subjectHue)
+    return () => setSubjectHue(null)
   }, [subjectHue])
 
   if (!subject) return <Navigate to="/" replace />
