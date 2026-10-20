@@ -1,10 +1,11 @@
 // Khả năng truy cập (người dùng trình đọc màn hình, bàn phím, mắt kém): quét bằng axe theo chuẩn WCAG 2.1 AA.
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
-import { openSubject, tab, waitAnimations } from './helpers.js'
+import { gradeCard, openSubject, tab, waitAnimations } from './helpers.js'
 
 for (const theme of ['light', 'dark']) {
   test(`không có lỗi khả năng truy cập ở mọi màn hình (giao diện ${theme === 'light' ? 'sáng' : 'tối'})`, async ({ page }) => {
+    test.slow() // quét hơn chục màn hình
     await page.addInitScript((t) => localStorage.setItem('so-on-tap:giao-dien', t), theme)
     const problems = []
     // ready: một phần tử của màn hình cần quét. Chuyển trang chạy sau cú bấm một chút, nên phải đợi
@@ -23,6 +24,10 @@ for (const theme of ['light', 'dark']) {
     await page.getByRole('button', { name: 'Đổi tên' }).click()
     await scan('đổi tên môn', page.locator('#subject-name'))
     await page.getByRole('button', { name: 'Huỷ' }).click()
+    // Chấm hết 6 thẻ để xem màn hình ôn xong.
+    await page.getByRole('button', { name: /^Dễ/ }).click()
+    for (let i = 0; i < 5; i++) await gradeCard(page, 'Dễ')
+    await scan('ôn xong', page.locator('.result'))
     await tab(page, 'Trắc nghiệm')
     await scan('cài đặt trắc nghiệm', page.getByRole('button', { name: 'Bắt đầu' }))
     await page.getByRole('button', { name: 'Bắt đầu' }).click()

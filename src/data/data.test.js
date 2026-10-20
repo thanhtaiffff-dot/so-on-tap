@@ -4,7 +4,8 @@ import { applyChanges, diffState, shallowEqual } from './diff.js'
 import { uid } from './uuid.js'
 import { makeSample } from './sample.js'
 import { reducer } from './store.jsx'
-import { parseBulk, quizCounts, review } from '../components/util.js'
+import { formatDays, formatSpan, parseBulk, quizCounts } from '../components/util.js'
+import { NEW, REVIEW } from './srs.js'
 
 const DAY = 864e5
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -48,13 +49,15 @@ describe('sanitize', () => {
 
   it('đọc được file bản cũ và giữ đúng thứ tự trong file', () => {
     const d = sanitize(v1, { now: 1000 })
-    expect(d.version).toBe(2)
+    expect(d.version).toBe(3)
     expect(d.subjects.map((s) => s.id)).toEqual(['en', 'ly'])
     expect(d.subjects[0].name).toBe('Tiếng Anh')
     expect(d.subjects[1].hue).toBe(360)
     expect(d.cards.map((c) => c.id)).toEqual(['c1', 'c2'])
-    expect(d.cards[1].box).toBe(5)
-    expect(d.cards[0]).toMatchObject({ leveledAt: 0, createdAt: 0 })
+    // Hộp của bản cũ được chuyển sang lịch ôn mới: hộp 4 là nhớ được khoảng 2 tuần.
+    expect(d.cards[0]).toMatchObject({ state: REVIEW, stability: 14, due: 5 + 14 * DAY, reviewedAt: 5, note: '', createdAt: 0 })
+    expect(d.cards[1]).toMatchObject({ state: REVIEW, stability: 30 })
+    expect(d.cards[0]).not.toHaveProperty('box')
     expect(d.notes[0].body).toHaveLength(LIMITS.body)
     expect(d.quizHistory[0].score).toBe(10)
     expect(d.quizHistory[0].id).toMatch(UUID)
@@ -94,7 +97,7 @@ describe('diffState / applyChanges', () => {
 
   it('chỉ ghi bản ghi đã đổi', () => {
     const card = base.cards[2]
-    const next = { ...base, cards: base.cards.map((c) => (c === card ? { ...c, box: 1 } : c)) }
+    const next = { ...base, cards: base.cards.map((c) => (c === card ? { ...c, front: 'đã sửa' } : c)) }
     const d = diffState(base, next)
     expect(Object.keys(d)).toEqual(['cards'])
     expect(d.cards.put.map((c) => c.id)).toEqual([card.id])
@@ -124,6 +127,21 @@ describe('diffState / applyChanges', () => {
 describe('reducer', () => {
   const s = sanitize(makeSample(1000))
 
+  it('chấm thẻ thì hẹn lần ôn tới, thẻ khác giữ nguyên', () => {
+    const id = s.cards[0].id
+    const next = reducer(s, { type: 'card/grade', id, rating: 4, now: 5 * DAY })
+    expect(next.cards[0]).toMatchObject({ state: REVIEW, reviewedAt: 5 * DAY, learnedAt: 5 * DAY, reps: 1 })
+    expect(next.cards[0].due).toBeGreaterThan(5 * DAY + 2 * DAY)
+    expect(next.cards.slice(1)).toEqual(s.cards.slice(1))
+  })
+
+  it('thêm và sửa thẻ có phần giải thích', () => {
+    let next = reducer(s, { type: 'card/addMany', subjectId: s.subjects[0].id, items: [{ id: 'n', front: 'f', back: 'b', note: 'g' }], now: 1 })
+    expect(next.cards.at(-1)).toMatchObject({ note: 'g', state: NEW })
+    next = reducer(next, { type: 'card/update', id: 'n', front: 'f2', back: 'b2', note: '' })
+    expect(next.cards.at(-1)).toMatchObject({ front: 'f2', back: 'b2', note: '' })
+  })
+
   it('thẻ mới luôn nằm cuối dù đồng hồ máy chạy lùi', () => {
     const next = reducer(s, { type: 'card/addMany', subjectId: s.subjects[0].id, items: [{ id: 'x', front: 'f', back: 'b' }], now: 1 })
     expect(next.cards.at(-1).id).toBe('x')
@@ -147,31 +165,6 @@ describe('reducer', () => {
   })
 })
 
-describe('review (lỗi L4: 3 lượt là "đã thuộc")', () => {
-  const card = { id: 'c', box: 0, reviewedAt: 0, leveledAt: 0 }
-  const day1 = new Date(2026, 9, 19, 9).getTime()
-
-  it('mỗi ngày chỉ lên tối đa 1 mức', () => {
-    let c = card
-    for (let i = 0; i < 5; i++) c = review(c, true, day1 + i * 60e3)
-    expect(c.box).toBe(1)
-    c = review(c, true, day1 + DAY)
-    c = review(c, true, day1 + DAY + 60e3)
-    expect(c.box).toBe(2)
-    c = review(c, true, day1 + 2 * DAY)
-    expect(c.box).toBe(3)
-  })
-
-  it('quên thì về mức 0, nhớ lại ngay trong ngày được lên mức 1', () => {
-    let c = review({ ...card, box: 4, leveledAt: day1 - DAY }, false, day1)
-    expect(c.box).toBe(0)
-    c = review(c, true, day1 + 1000)
-    expect(c.box).toBe(1)
-    c = review(c, true, day1 + 2000)
-    expect(c.box).toBe(1)
-  })
-})
-
 describe('quizCounts (lỗi L8: nút ghi 5 / 6 / 6)', () => {
   it('không có nút trùng số', () => {
     expect(quizCounts(6)).toEqual([5, 6])
@@ -184,10 +177,56 @@ describe('quizCounts (lỗi L8: nút ghi 5 / 6 / 6)', () => {
 describe('parseBulk', () => {
   it('đọc các kiểu ngăn cách', () => {
     expect(parseBulk('a - b\nc\td\ne;f\ng | h\n\nkhông có dấu')).toEqual([
-      { front: 'a', back: 'b' },
-      { front: 'c', back: 'd' },
-      { front: 'e', back: 'f' },
-      { front: 'g', back: 'h' },
+      { front: 'a', back: 'b', note: '' },
+      { front: 'c', back: 'd', note: '' },
+      { front: 'e', back: 'f', note: '' },
+      { front: 'g', back: 'h', note: '' },
     ])
+  })
+
+  it('dán từ Excel 3 cột thì cột thứ ba là phần giải thích', () => {
+    expect(parseBulk('ambitious\ttham vọng; hoài bão\tShe is ambitious.\nx\ty\t')).toEqual([
+      { front: 'ambitious', back: 'tham vọng; hoài bão', note: 'She is ambitious.' },
+      { front: 'x', back: 'y', note: '' },
+    ])
+  })
+})
+
+describe('sanitize: lịch ôn và phần giải thích', () => {
+  const base = { subjects: [{ id: 's', name: 'Môn' }] }
+
+  it('giữ nguyên lịch ôn hợp lệ, sửa số lạ thay vì làm hỏng thuật toán', () => {
+    const card = { id: 'c', subjectId: 's', front: 'f', back: 'b', note: ' ví dụ ', state: REVIEW, due: 5000, stability: 12.5, difficulty: 4.2, step: 0, reps: 3, lapses: 1, reviewedAt: 4000, learnedAt: 1000 }
+    const d = sanitize({ ...base, version: 3, cards: [card] })
+    expect(d.cards[0]).toEqual({ ...card, note: 'ví dụ', createdAt: 0 })
+    const bad = sanitize({ ...base, cards: [{ ...card, stability: 0, difficulty: 99, reps: -4, step: 2.6 }] }).cards[0]
+    expect(bad.stability).toBeGreaterThan(0)
+    expect(bad).toMatchObject({ difficulty: 10, reps: 1, step: 3 })
+  })
+
+  it('thẻ mới thì không giữ lịch ôn rác; trạng thái lạ thì đọc theo kiểu cũ', () => {
+    const d = sanitize({ ...base, cards: [
+      { id: 'a', subjectId: 's', front: 'f', back: 'b', state: NEW, reps: 7, stability: 3 },
+      { id: 'b', subjectId: 's', front: 'f', back: 'b', state: 9, box: 0, reviewedAt: 0 },
+    ] })
+    expect(d.cards[0]).toMatchObject({ state: NEW, reps: 0, stability: 0, learnedAt: 0 })
+    expect(d.cards[1]).toMatchObject({ state: NEW })
+  })
+
+  it('cắt phần giải thích quá dài', () => {
+    const d = sanitize({ ...base, cards: [{ id: 'a', subjectId: 's', front: 'f', back: 'b', note: 'x'.repeat(LIMITS.note + 9) }] })
+    expect(d.cards[0].note).toHaveLength(LIMITS.note)
+  })
+})
+
+describe('formatSpan / formatDays', () => {
+  it('ghi thời gian dễ đọc', () => {
+    expect(formatSpan(30e3)).toBe('1 phút')
+    expect(formatSpan(10 * 60e3)).toBe('10 phút')
+    expect(formatSpan(5 * 3600e3)).toBe('5 giờ')
+    expect(formatSpan(3 * DAY)).toBe('3 ngày')
+    expect(formatSpan(45 * DAY)).toBe('1,5 tháng')
+    expect(formatSpan(800 * DAY)).toBe('2,2 năm')
+    expect([0, 1, 4].map(formatDays)).toEqual(['hôm nay', 'ngày mai', '4 ngày nữa'])
   })
 })

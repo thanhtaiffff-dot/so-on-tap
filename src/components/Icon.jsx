@@ -49,6 +49,7 @@ const PATHS = {
     </>
   ),
   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
+  arrow: <path d="M5 12h14m-5-5 5 5-5 5" />,
 }
 
 export default function Icon({ name, size = 18 }) {

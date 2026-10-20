@@ -72,7 +72,7 @@ test('tải file sao lưu, xoá hết rồi khôi phục lại', async ({ page }
   expect(download.suggestedFilename()).toMatch(/^so-on-tap-\d{4}-\d{2}-\d{2}\.json$/)
   const file = await download.path()
   const data = JSON.parse(await readFile(file, 'utf8'))
-  expect(data).toMatchObject({ app: 'so-on-tap', version: 2 })
+  expect(data).toMatchObject({ app: 'so-on-tap', version: 3 })
   expect(data.cards).toHaveLength(11)
   await expect(page.locator('.panel', { hasText: 'Sao lưu và khôi phục' })).toContainText('Lần sao lưu gần nhất')
 
