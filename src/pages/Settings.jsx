@@ -1,16 +1,24 @@
 import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useBackup, useSave, useStore } from '../data/store.jsx'
 import { DataError } from '../data/schema.js'
 import ConfirmButton from '../components/ConfirmButton.jsx'
 import { SafariTip } from '../components/Banners.jsx'
 import { formatDate } from '../components/util.js'
 import { promptInstall, useInstallHow } from '../pwa.js'
+import AppearancePanel from '../components/AppearancePanel.jsx'
 
 export default function Settings() {
   const { importJson, resetAll } = useStore()
   const { meta } = useSave()
   const backup = useBackup()
   const [msg, setMsg] = useState(null)
+  const location = useLocation()
+
+  // Mở từ lệnh "Tùy chỉnh giao diện" của bảng tìm nhanh: đưa con trỏ tới mục Giao diện.
+  useEffect(() => {
+    if (location.state?.focus === 'giao-dien') document.getElementById('giao-dien')?.focus()
+  }, [location.state])
 
   function exportFile() {
     try {
@@ -38,6 +46,7 @@ export default function Settings() {
     <section className="settings narrow">
       <h1>Cài đặt</h1>
       <SafariTip />
+      <AppearancePanel />
 
       <div className="panel">
         <h2>Dữ liệu của bạn nằm ở đâu?</h2>

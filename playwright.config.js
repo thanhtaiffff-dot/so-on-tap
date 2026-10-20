@@ -18,6 +18,6 @@ export default defineConfig({
   },
   projects: [
     { name: 'may-tinh', use: { ...devices['Desktop Chrome'] } },
-    { name: 'dien-thoai', use: { ...devices['Pixel 7'] }, testMatch: /chinh\.spec/ },
+    { name: 'dien-thoai', use: { ...devices['Pixel 7'] }, testMatch: /(chinh|giao-dien)\.spec/ },
   ],
 })
